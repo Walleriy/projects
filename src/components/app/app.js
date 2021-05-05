@@ -6,20 +6,36 @@ import ErrorIndicator from "../error-indicator";
 import SwapiService from "../../services/swapi-service";
 import Row from "../row";
 import ItemDetails, { Record } from "../item-details";
+import {PersonDetails, PersonList, PlanetDetails, PlanetList, StarshipDetails, StarshipList} from "../sw-components";
+import ErrorBoundry from "../error-boundry";
+import {SwapiServiceProvider} from "../swapi-service-context";
+import DummySwapiService from "../../services/dummy-swapi-service";
 
 export default class App extends Component {
 
-    swapiService = new SwapiService();
+
 
     state = {
         showRandomPlanet: true,
-        hasError: false
+        hasError: false,
+        swapiService: new SwapiService()
     };
 
     componentDidCatch(error, errorInfo) {
         console.log('componentDidCatch(error, errorInfo)');
         this.setState({
             hasError: true
+        })
+    }
+
+    onServiceChange = () => {
+        this.setState(({ swapiService }) => {
+
+            const Service = swapiService instanceof SwapiService ?
+                DummySwapiService : SwapiService;
+            return {
+                swapiService: new Service()
+            }
         })
     }
 
@@ -33,23 +49,23 @@ export default class App extends Component {
 
     render() {
 
-        if(this.state.hasError) {
-            return <ErrorIndicator />
+        if (this.state.hasError) {
+            return <ErrorIndicator/>
         }
 
         const planet = this.state.showRandomPlanet ?
             <RandomPlanet/> :
             null;
 
-        const { getPerson, getStarship } = this.swapiService;
+        const {getPerson, getStarship } = this.state.swapiService;
 
         const personDetails = (
             <ItemDetails
                 getData={getPerson}
                 itemId={10}
             >
-                <Record field="gender" label="Gender" />
-                <Record field="eyeColor" label="Eye Color" />
+                <Record field="gender" label="Gender"/>
+                <Record field="eyeColor" label="Eye Color"/>
             </ItemDetails>
         );
 
@@ -58,18 +74,30 @@ export default class App extends Component {
                 getData={getStarship}
                 itemId={5}
             >
-                <Record field="model" label="Model" />
-                <Record field="length" label="Length" />
-                <Record field="costInCredits" label="Cost" />
+                <Record field="model" label="Model"/>
+                <Record field="length" label="Length"/>
+                <Record field="costInCredits" label="Cost"/>
             </ItemDetails>
         );
 
         return (
-            <div className="stardb-app">
-                <Header />
-                <Row left={personDetails} right={starshipDetails} />
+            <ErrorBoundry>
+                <SwapiServiceProvider value={this.state.swapiService}>
+                    <div className="stardb-app">
+                        <Header onServiceChange={this.onServiceChange}/>
 
-            </div>
+                        <PersonDetails itemId={11}/>
+                        <PlanetDetails itemId={9}/>
+                        <StarshipDetails itemId={5}/>
+
+                        <PersonList/>
+                        <PlanetList/>
+                        <StarshipList/>
+
+                        <Row left={personDetails} right={starshipDetails}/>
+                    </div>
+                </SwapiServiceProvider>
+            </ErrorBoundry>
         );
     }
 }
